@@ -1,0 +1,100 @@
+{% extends 'academic/base.html' %}
+
+{% block title %}Weekend Planner | Academic Hub{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-amber-400 flex items-center gap-2">
+                ⚡ <span>Weekend Sprint Planner</span>
+            </h1>
+            <p class="text-sm text-slate-400">Organizează-ți și execută-ți obiectivele pentru weekend fără stres.</p>
+        </div>
+    </div>
+
+    {% if plan %}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Active Sprint Overview & Tasks (2 Cols) -->
+        <div class="lg:col-span-2 space-y-6">
+            <div class="bg-cardbg border border-borderbg rounded-xl p-6 space-y-4 shadow-sm">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-slate-100">{{ plan.title }}</h2>
+                    <span class="text-xs bg-amber-500/10 text-amber-400 border border-amber-500/30 px-3 py-1 rounded-full font-bold">
+                        {{ plan.start_date }} ➔ {{ plan.end_date }}
+                    </span>
+                </div>
+
+                <!-- Overall Progress -->
+                <div>
+                    <div class="flex justify-between text-sm mb-1 font-medium">
+                        <span>Progres Total Sprint</span>
+                        <span class="text-amber-400">{{ plan.progress_percentage }}% ({{ plan.completed_tasks_count }}/{{ plan.total_tasks }})</span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden">
+                        <div class="bg-amber-500 h-3 rounded-full transition-all duration-300" style="width: {{ plan.progress_percentage }}%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Task List in Sprint -->
+            <div class="bg-cardbg border border-borderbg rounded-xl p-5 space-y-3">
+                <h3 class="font-bold text-lg text-slate-200 mb-2">Task-uri Selectate pentru Weekend</h3>
+                
+                {% for task in plan.tasks.all %}
+                <div class="flex items-center justify-between p-3 bg-slate-900/60 border border-slate-800 rounded-lg">
+                    <div class="flex items-center gap-3">
+                        <a href="{% url 'toggle_task' task.id %}" class="w-6 h-6 rounded border border-amber-500 flex items-center justify-center bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 font-bold transition">
+                            {% if task.is_completed %}✓{% endif %}
+                        </a>
+                        <div>
+                            <p class="font-medium text-slate-200 text-sm {% if task.is_completed %}line-through text-slate-500{% endif %}">
+                                {{ task.title }}
+                            </p>
+                            <span class="text-xs font-semibold" style="color: {{ task.subject.color_code }};">
+                                {{ task.subject.name }}
+                            </span>
+                        </div>
+                    </div>
+                    <span class="text-xs text-slate-400 font-mono">{{ task.estimated_hours }} Ore</span>
+                </div>
+                {% empty %}
+                <p class="text-sm text-slate-400 text-center py-4">Nu ai adăugat niciun task în planul de weekend încă.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Add Tasks to Sprint Sidebar (1 Col) -->
+        <div class="bg-cardbg border border-borderbg rounded-xl p-5 space-y-4 h-fit">
+            <h3 class="font-bold text-lg text-slate-200">Adaugă Task-uri în Sprint</h3>
+            <p class="text-xs text-slate-400">Alege din task-urile nefinalizate din semestru:</p>
+
+            <div class="space-y-2 max-h-96 overflow-y-auto pr-1">
+               {% for task in all_tasks %}
+    {% if task not in plan.tasks.all %}
+    <form method="POST" class="p-2.5 bg-slate-900/40 border border-slate-800 rounded-lg flex justify-between items-center text-xs">
+        {% csrf_token %}
+        <input type="hidden" name="add_task_id" value="{{ task.id }}">
+        <div>
+            <p class="font-medium text-slate-300">{{ task.title }}</p>
+            <span style="color: {{ task.subject.color_code }};">{{ task.subject.code }}</span>
+        </div>
+        <button type="submit" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded font-bold transition">
+            + Adaugă
+        </button>
+    </form>
+    {% endif %}
+{% endfor %}
+            </div>
+        </div>
+
+    </div>
+    {% else %}
+    <div class="bg-cardbg border border-borderbg rounded-xl p-8 text-center space-y-3">
+        <p class="text-slate-400">Nu există niciun plan de weekend activ în acest moment.</p>
+        <p class="text-xs text-slate-500">Poți crea unul direct din panoul de Admin (`/admin/academic/weekendplan/add/`).</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
