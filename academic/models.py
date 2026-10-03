@@ -16,6 +16,7 @@ class Project(models.Model):
     subject=models.ForeignKey(Subject,on_delete=models.CASCADE,related_name="projects")
     title=models.CharField(max_length=200)
     description=models.TextField(blank=True)
+    repository_url = models.URLField(blank=True, help_text="Link GitHub/GitLab/Drive")
     deadline=models.DateTimeField()
     next_step=models.TextField(blank=True,help_text="Urmatorul pas concret de facut la proiect")
     created_at=models.DateTimeField(auto_now_add=True)

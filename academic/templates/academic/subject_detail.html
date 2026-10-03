@@ -1,0 +1,45 @@
+{% extends 'academic/base.html' %}
+
+{% block title %}{{ subject.name }} | Academic Hub{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <div class="flex items-center gap-3 border-b border-borderbg pb-4">
+        <span class="w-5 h-5 rounded-full" style="background-color: {{ subject.color_code }};"></span>
+        <h1 class="text-3xl font-bold text-slate-100">{{ subject.name }} ({{ subject.code }})</h1>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Proiecte asociate -->
+        <div class="space-y-4">
+            <h2 class="text-xl font-bold">Proiecte la această materie</h2>
+            {% for project in projects %}
+            <div class="bg-cardbg border border-borderbg rounded-xl p-4 space-y-2">
+                <h3 class="font-bold text-slate-100 text-lg">{{ project.title }}</h3>
+                <p class="text-xs text-slate-400">{{ project.description }}</p>
+                {% if project.repository_url %}
+                <a href="{{ project.repository_url }}" target="_blank" class="inline-block text-xs text-blue-400 hover:underline">
+                    🔗 Deschide Repo Git / Resurse
+                </a>
+                {% endif %}
+            </div>
+            {% empty %}
+            <p class="text-sm text-slate-400">Fără proiecte adăugate.</p>
+            {% endfor %}
+        </div>
+
+        <!-- Debug Logs asociate -->
+        <div class="space-y-4">
+            <h2 class="text-xl font-bold">Note Debugging & Soluții</h2>
+            {% for log in debug_logs %}
+            <div class="bg-cardbg border border-borderbg rounded-xl p-4 space-y-2">
+                <h3 class="font-bold text-red-400 text-sm">{{ log.title }}</h3>
+                <pre class="bg-slate-900 p-2 rounded text-xs text-slate-300 overflow-x-auto">{{ log.solution }}</pre>
+            </div>
+            {% empty %}
+            <p class="text-sm text-slate-400">Nicio notă de debugging înregistrată.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

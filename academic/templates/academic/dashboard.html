@@ -7,16 +7,16 @@
     
     <!-- Top Bar Status / Subject Pills -->
     <div>
-        <h2 class="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-3">Materiile Semestrului</h2>
-        <div class="flex flex-wrap gap-3">
-            {% for subject in subjects %}
-            <div class="bg-cardbg border border-borderbg rounded-lg px-3 py-2 flex items-center gap-2 text-sm shadow-sm">
-                <span class="w-3 h-3 rounded-full" style="background-color: {{ subject.color_code }};"></span>
-                <span class="font-medium text-slate-200">{{ subject.code }}</span>
-            </div>
-            {% endfor %}
-        </div>
+    <h2 class="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-3">Materiile Semestrului (Apasă pe o materie)</h2>
+    <div class="flex flex-wrap gap-3">
+        {% for subject in subjects %}
+        <a href="{% url 'subject_detail' subject.id %}" class="bg-cardbg border border-borderbg hover:border-slate-500 rounded-lg px-3.5 py-2 flex items-center gap-2 text-sm shadow-sm transition">
+            <span class="w-3 h-3 rounded-full" style="background-color: {{ subject.color_code }};"></span>
+            <span class="font-bold text-slate-200">{{ subject.code }}</span>
+        </a>
+        {% endfor %}
     </div>
+</div>
 
     <!-- Active Weekend Banner (If exists) -->
     {% if current_weekend %}

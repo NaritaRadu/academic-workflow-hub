@@ -23,6 +23,21 @@ def dashboard(request):
     }
     return render(request,'academic/dashboard.html',context)
 
+def subject_detail(request, subject_id):
+    """Pagina dedicată unei singure materii (ex: Click pe SO2)"""
+    subject = get_object_or_404(Subject, id=subject_id)
+    projects = subject.projects.all()
+    tasks = subject.tasks.filter(is_completed=False)
+    debug_logs = subject.debug_logs.all().order_by('-created_at')
+
+    context = {
+        'subject': subject,
+        'projects': projects,
+        'tasks': tasks,
+        'debug_logs': debug_logs,
+    }
+    return render(request, 'academic/subject_detail.html', context)
+
 def toggle_task(request,task_id):
     #Actiune rapida pentru a bifa/debifa un task
     task=get_object_or_404(Task,id=task_id)
@@ -51,10 +66,47 @@ def weekend_planner(request):
     return render(request,'academic/weekend_planner.html',context)
 
 def projects_list(request):
-    #Tracker detaliat de proiecte
-    projects=Project.objects.all().order_by('deadline')
-    return render(request,'academic/projects.html',{'projects':projects})
+    """Listă proiecte + formular adăugare rapidă"""
+    if request.method == 'POST':
+        subject_id = request.POST.get('subject_id')
+        title = request.POST.get('title')
+        description = request.POST.get('description')
+        repo_url = request.POST.get('repository_url')
+        deadline = request.POST.get('deadline')
+
+        if subject_id and title and deadline:
+            subject = get_object_or_404(Subject, id=subject_id)
+            Project.objects.create(
+                subject=subject,
+                title=title,
+                description=description,
+                repository_url=repo_url,
+                deadline=deadline
+            )
+            return redirect('projects_list')
+
+    projects = Project.objects.all().order_by('deadline')
+    subjects = Subject.objects.all()
+    return render(request, 'academic/projects.html', {'projects': projects, 'subjects': subjects})
 
 def debug_log_list(request):
-    logs=DebugLog.objects.all().order_by('-created_at')
-    return render(request,'academic/debug_logs.html',{'logs':logs})
+    """Jurnal debugging + formular adăugare eroare nouă"""
+    if request.method == 'POST':
+        subject_id = request.POST.get('subject_id')
+        title = request.POST.get('title')
+        error_message = request.POST.get('error_message')
+        solution = request.POST.get('solution')
+
+        if subject_id and title and solution:
+            subject = get_object_or_404(Subject, id=subject_id)
+            DebugLog.objects.create(
+                subject=subject,
+                title=title,
+                error_message=error_message,
+                solution=solution
+            )
+            return redirect('debug_log_list')
+
+    logs = DebugLog.objects.all().order_by('-created_at')
+    subjects = Subject.objects.all()
+    return render(request, 'academic/debug_logs.html', {'logs': logs, 'subjects': subjects})
