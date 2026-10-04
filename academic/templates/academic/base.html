@@ -4,39 +4,50 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Academic Hub{% endblock %}</title>
-    <!-- Tailwind CSS -->
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
-                        darkbg: '#0F172A',
-                        cardbg: '#1E293B',
-                        borderbg: '#334155'
+                        darkbg: '#0B0F17',
+                        cardbg: '#161F30',
+                        borderbg: '#23314B'
                     }
                 }
             }
         }
     </script>
 </head>
-<body class="bg-darkbg text-slate-100 min-h-screen font-sans flex flex-col">
+<body class="bg-darkbg text-slate-100 min-h-screen font-sans flex flex-col antialiased">
 
     <!-- Navigation Bar -->
-    <nav class="bg-cardbg border-b border-borderbg py-3 px-6 sticky top-0 z-50">
+    <nav class="bg-cardbg/80 backdrop-blur-md border-b border-borderbg py-3.5 px-6 sticky top-0 z-50">
         <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <a href="{% url 'dashboard' %}" class="text-xl font-bold text-blue-400 flex items-center gap-2">
-                🎓 <span>Academic Hub</span>
+            <a href="{% url 'dashboard' %}" class="text-xl font-black text-blue-400 flex items-center gap-2.5 tracking-wide">
+                <span class="bg-blue-500/20 text-blue-400 p-2 rounded-xl text-lg border border-blue-500/30">🎓</span>
+                <span>Academic<span class="text-slate-100">Hub</span></span>
             </a>
-            <div class="flex gap-6 text-sm font-medium">
-                <a href="{% url 'dashboard' %}" class="hover:text-blue-400 transition">Dashboard</a>
-                <a href="{% url 'weekend_planner' %}" class="hover:text-amber-400 transition flex items-center gap-1">
-                    ⚡ <span>Weekend Planner</span>
+            
+            <div class="flex items-center gap-6 text-sm font-semibold">
+                <a href="{% url 'dashboard' %}" class="hover:text-blue-400 transition flex items-center gap-2 text-slate-300">
+                    <i class="fa-solid fa-chart-pie text-xs"></i> Dashboard
                 </a>
-                <a href="{% url 'projects_list' %}" class="hover:text-blue-400 transition">Proiecte</a>
-                <a href="{% url 'debug_log_list' %}" class="hover:text-blue-400 transition">Debug Vault</a>
-                <a href="/admin/" target="_blank" class="text-slate-400 hover:text-white transition">Admin ⚙️</a>
+                <a href="{% url 'weekend_planner' %}" class="hover:text-amber-400 transition flex items-center gap-2 text-amber-400/90 font-bold bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20">
+                    <i class="fa-solid fa-bolt text-xs"></i> Weekend Planner
+                </a>
+                <a href="{% url 'projects_list' %}" class="hover:text-blue-400 transition flex items-center gap-2 text-slate-300">
+                    <i class="fa-solid fa-folder-open text-xs"></i> Proiecte
+                </a>
+                <a href="{% url 'debug_log_list' %}" class="hover:text-blue-400 transition flex items-center gap-2 text-slate-300">
+                    <i class="fa-solid fa-bug text-xs"></i> Debug Vault
+                </a>
+                <a href="/admin/" target="_blank" class="text-slate-500 hover:text-slate-300 transition text-xs">
+                    ⚙️ Admin
+                </a>
             </div>
         </div>
     </nav>
@@ -47,8 +58,8 @@
     </main>
 
     <!-- Footer -->
-    <footer class="border-t border-borderbg py-4 text-center text-xs text-slate-500">
-        Academic Hub — Calculatoare & TI | Anul 3
+    <footer class="border-t border-borderbg/50 py-5 text-center text-xs text-slate-500">
+        Academic Hub — Tehnologia Informației | Anul 3
     </footer>
 
 </body>
