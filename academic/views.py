@@ -23,6 +23,33 @@ def dashboard(request):
     }
     return render(request,'academic/dashboard.html',context)
 
+
+def add_task(request):
+    if request.method=='POST':
+        subject_id=request.POST.get('subject_id')
+        project_id=request.POST.get('project_id')
+        title=request.POST.get('title')
+        notes=request.POST.get('notes','')
+        priority=request.POST.get('priority','MEDIUM')
+        estimated_hours=request.POST.get('estimated_hours',1.0)
+        due_date=request.POST.get('due_date')
+        
+        if subject_id and title:
+            subject=get_object_or_404(Subject,id=subject_id)
+            project=get_object_or_404(Project,id=project_id) if project_id else None
+            
+            Task.objects.create(
+                subject=subject,
+                project=project,
+                title=title,
+                notes=notes,
+                priority=priority,
+                estimated_hours=estimated_hours,
+                due_date=due_date if due_date else None
+            )
+    referer=request.META.get('HTTP_REFERER')
+    return redirect(referer if referer else 'dashboard')
+
 def subject_detail(request, subject_id):
     """Pagina dedicată unei singure materii (ex: Click pe SO2)"""
     subject = get_object_or_404(Subject, id=subject_id)
