@@ -19,137 +19,131 @@
     </div>
 
     <!-- Section Bar: Add Task Button -->
-    <div class="flex justify-between items-center bg-cardbg/40 p-4 border border-borderbg rounded-2xl shadow-sm">
-        <div>
-            <h1 class="text-xl font-extrabold text-slate-100">Overview Semestru</h1>
-            <p class="text-xs text-slate-400">Vizualizează statusul proiectelor și task-urile curente.</p>
-        </div>
-
-        <!-- Formular rapid / Modal deschidere Task Nou -->
-        <details class="group">
-            <summary class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-blue-600/20 transition">
-                <span>+ Adaugă Task Nou</span>
-            </summary>
-            
-            <div class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                <div class="bg-cardbg border border-borderbg rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
-                    <div class="flex justify-between items-center border-b border-borderbg pb-3">
-                        <h3 class="font-bold text-lg text-slate-100">➕ Creează Task Nou</h3>
-                        <p class="text-xs text-slate-400">Apasă pe butonul de sus pentru închidere</p>
-                    </div>
-
-                    <form method="POST" action="{% url 'add_task' %}" class="space-y-3">
-                        {% csrf_token %}
-                        
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-400 mb-1">Materia *</label>
-                            <select name="subject_id" required class="w-full bg-darkbg border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200">
-                                {% for sub in subjects %}
-                                <option value="{{ sub.id }}">{{ sub.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-400 mb-1">Proiect Asociat (Opțional)</label>
-                            <select name="project_id" class="w-full bg-darkbg border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200">
-                                <option value="">--- Fără Proiect ---</option>
-                                {% for prj in active_projects %}
-                                <option value="{{ prj.id }}">{{ prj.title }} ({{ prj.subject.code }})</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-400 mb-1">Titlu Task *</label>
-                            <input type="text" name="title" required placeholder="ex: Pregătire test laborator SO2" class="w-full bg-darkbg border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200">
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-400 mb-1">Prioritate</label>
-                                <select name="priority" class="w-full bg-darkbg border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200">
-                                    <option value="LOW">Scăzută</option>
-                                    <option value="MEDIUM" selected>Medie</option>
-                                    <option value="HIGH">Ridicată</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-400 mb-1">Ore Estimate</label>
-                                <input type="number" step="0.5" name="estimated_hours" value="1.0" class="w-full bg-darkbg border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200">
-                            </div>
-                        </div>
-
-                        <div>
-    <label class="block text-xs font-semibold text-slate-400 mb-1.5">Data Limită (Alege rapid sau din calendar)</label>
-    
-    <!-- Butoane Rapide cu 1-Click -->
-    <div class="grid grid-cols-4 gap-1.5 mb-2">
-        <button type="button" onclick="setQuickDate('today')" class="bg-slate-800 hover:bg-blue-600/30 hover:border-blue-500 text-slate-300 text-[11px] font-bold py-1.5 rounded-lg border border-slate-700 transition">
-            Azi
-        </button>
-        <button type="button" onclick="setQuickDate('tomorrow')" class="bg-slate-800 hover:bg-blue-600/30 hover:border-blue-500 text-slate-300 text-[11px] font-bold py-1.5 rounded-lg border border-slate-700 transition">
-            Mâine
-        </button>
-        <button type="button" onclick="setQuickDate('in_3_days')" class="bg-slate-800 hover:bg-blue-600/30 hover:border-blue-500 text-slate-300 text-[11px] font-bold py-1.5 rounded-lg border border-slate-700 transition">
-            +3 Zile
-        </button>
-        <button type="button" onclick="setQuickDate('next_week')" class="bg-slate-800 hover:bg-blue-600/30 hover:border-blue-500 text-slate-300 text-[11px] font-bold py-1.5 rounded-lg border border-slate-700 transition">
-            +1 Săptămână
-        </button>
+<div class="flex justify-between items-center bg-cardbg/40 p-4 border border-borderbg rounded-2xl shadow-sm">
+    <div>
+        <h1 class="text-xl font-extrabold text-slate-100">Overview Semestru</h1>
+        <p class="text-xs text-slate-400">Vizualizează statusul proiectelor și task-urile curente.</p>
     </div>
 
-    <!-- Input ascuns pentru opțiunea rapidă -->
-    <input type="hidden" name="quick_date" id="quick_date_input">
-
-    <!-- Inputul de dată propriu-zis (Stilizat mai prietenos) -->
-    <input type="text" id="flatpickr_date" name="due_date" placeholder="Sau alege o dată din calendar..." class="w-full bg-darkbg border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200 cursor-pointer">
+    <!-- Buton deschidere Modal -->
+    <button onclick="document.getElementById('taskModal').showModal()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-blue-600/20 transition">
+        <span>+ Adaugă Task Nou</span>
+    </button>
 </div>
 
-<!-- Script Flatpickr pentru calendar ultra-rapid -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<link rel="stylesheet" href="https://npmcdn.com/flatpickr/dist/themes/dark.css">
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-
-<script>
-    // Inițializare calendar Flatpickr modern
-    const fp = flatpickr("#flatpickr_date", {
-        enableTime: true,
-        dateFormat: "Y-m-d H:i",
-        time_24hr: true,
-        defaultHour: 23,
-        defaultMinute: 59,
-    });
-
-    // Funcție pentru setat data la 1-click din butoanele rapide
-    function setQuickDate(type) {
-        document.getElementById('quick_date_input').value = type;
+<!-- Modal Nativ de HTML5 (<dialog>) -->
+<dialog id="taskModal" class="bg-transparent backdrop:bg-black/70 backdrop:backdrop-blur-sm p-0 rounded-2xl max-w-md w-full my-auto">
+    <div class="bg-cardbg border border-borderbg rounded-2xl p-6 shadow-2xl space-y-4 text-slate-100">
         
-        // Evidențiere vizuală că s-a selectat o opțiune rapidă
-        const now = new Date();
-        if (type === 'today') now.setHours(23, 59);
-        else if (type === 'tomorrow') { now.setDate(now.getDate() + 1); now.setHours(23, 59); }
-        else if (type === 'in_3_days') { now.setDate(now.getDate() + 3); now.setHours(23, 59); }
-        else if (type === 'next_week') { now.setDate(now.getDate() + 7); now.setHours(23, 59); }
+        <!-- Header Modal cu Buton de Închidere (Anulare) -->
+        <div class="flex justify-between items-center border-b border-borderbg pb-3">
+            <h3 class="font-bold text-lg text-slate-100">➕ Creează Task Nou</h3>
+            
+            <!-- Buton de Anulare / Închidere (✕) -->
+            <button onclick="document.getElementById('taskModal').close()" type="button" class="text-slate-400 hover:text-red-400 p-1 font-bold text-lg rounded-lg transition">
+                ✕
+            </button>
+        </div>
 
-        fp.setDate(now);
-    }
-</script>
+        <form method="POST" action="{% url 'add_task' %}" class="space-y-3">
+            {% csrf_token %}
+            
+            <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Materia *</label>
+                <select name="subject_id" required class="w-full bg-darkbg border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200">
+                    {% for sub in subjects %}
+                    <option value="{{ sub.id }}">{{ sub.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-400 mb-1">Notițe / Detalii</label>
-                            <textarea name="notes" rows="2" class="w-full bg-darkbg border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200" placeholder="Ce mai e de adăugat/rezolvat..."></textarea>
-                        </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Proiect Asociat (Opțional)</label>
+                <select name="project_id" class="w-full bg-darkbg border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200">
+                    <option value="">--- Fără Proiect ---</option>
+                    {% for prj in active_projects %}
+                    <option value="{{ prj.id }}">{{ prj.title }} ({{ prj.subject.code }})</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 font-bold py-2.5 rounded-xl text-xs text-white transition shadow-lg shadow-blue-600/20">
-                            Salvează Task-ul
-                        </button>
-                    </form>
+            <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Titlu Task *</label>
+                <input type="text" name="title" required placeholder="ex: Pregătire test laborator SO2" class="w-full bg-darkbg border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Prioritate</label>
+                    <select name="priority" class="w-full bg-darkbg border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200">
+                        <option value="LOW">Scăzută</option>
+                        <option value="MEDIUM" selected>Medie</option>
+                        <option value="HIGH">Ridicată</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Ore Estimate</label>
+                    <input type="number" step="0.5" name="estimated_hours" value="1.0" class="w-full bg-darkbg border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200">
                 </div>
             </div>
-        </details>
+
+            <!-- Câmp cu Selecție Rapidă de Dată -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1.5">Data Limită (Alege rapid sau din calendar)</label>
+                
+                <div class="grid grid-cols-4 gap-1.5 mb-2">
+                    <button type="button" onclick="setQuickDate('today')" class="bg-slate-800 hover:bg-blue-600/30 hover:border-blue-500 text-slate-300 text-[11px] font-bold py-1.5 rounded-lg border border-slate-700 transition">
+                        Azi
+                    </button>
+                    <button type="button" onclick="setQuickDate('tomorrow')" class="bg-slate-800 hover:bg-blue-600/30 hover:border-blue-500 text-slate-300 text-[11px] font-bold py-1.5 rounded-lg border border-slate-700 transition">
+                        Mâine
+                    </button>
+                    <button type="button" onclick="setQuickDate('in_3_days')" class="bg-slate-800 hover:bg-blue-600/30 hover:border-blue-500 text-slate-300 text-[11px] font-bold py-1.5 rounded-lg border border-slate-700 transition">
+                        +3 Zile
+                    </button>
+                    <button type="button" onclick="setQuickDate('next_week')" class="bg-slate-800 hover:bg-blue-600/30 hover:border-blue-500 text-slate-300 text-[11px] font-bold py-1.5 rounded-lg border border-slate-700 transition">
+                        +1 Săpt.
+                    </button>
+                </div>
+
+                <input type="hidden" name="quick_date" id="quick_date_input">
+                <input type="text" id="flatpickr_date" name="due_date" placeholder="Sau alege o dată din calendar..." class="w-full bg-darkbg border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200 cursor-pointer">
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Notițe / Detalii</label>
+                <textarea name="notes" rows="2" class="w-full bg-darkbg border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200" placeholder="Ce mai e de adăugat/rezolvat..."></textarea>
+            </div>
+
+            <!-- Acțiuni: Salvează SAU Anulează -->
+            <div class="flex gap-3 pt-2">
+                <button type="button" onclick="document.getElementById('taskModal').close()" class="w-1/3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl text-xs transition border border-slate-700">
+                    Anulează
+                </button>
+                <button type="submit" class="w-2/3 bg-blue-600 hover:bg-blue-500 font-bold py-2.5 rounded-xl text-xs text-white transition shadow-lg shadow-blue-600/20">
+                    Salvează Task-ul
+                </button>
+            </div>
+        </form>
     </div>
+</dialog>
+
+<script>
+    // Închidere modal la click în afara lui (pe fundalul întunecat)
+    const modal = document.getElementById('taskModal');
+    modal.addEventListener('click', (e) => {
+        const dialogDimensions = modal.getBoundingClientRect();
+        if (
+            e.clientX < dialogDimensions.left ||
+            e.clientX > dialogDimensions.right ||
+            e.clientY < dialogDimensions.top ||
+            e.clientY > dialogDimensions.bottom
+        ) {
+            modal.close();
+        }
+    });
+</script>
 
     <!-- Active Weekend Banner -->
     {% if current_weekend %}
