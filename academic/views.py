@@ -1,7 +1,7 @@
 from django.shortcuts import render,redirect, get_object_or_404
 from django.utils import timezone
 from .models import Subject, Project, Task,TestPrep,DebugLog,WeekendPlan
-
+from datetime import timedelta
 
 # Create your views here.
 
@@ -33,6 +33,18 @@ def add_task(request):
         priority=request.POST.get('priority','MEDIUM')
         estimated_hours=request.POST.get('estimated_hours',1.0)
         due_date=request.POST.get('due_date')
+        quick_date = request.POST.get('quick_date')
+        
+        if not due_date and quick_date:
+            now = timezone.now()
+            if quick_date == 'today':
+                due_date = now.replace(hour=23, minute=59)
+            elif quick_date == 'tomorrow':
+                due_date = (now + timedelta(days=1)).replace(hour=23, minute=59)
+            elif quick_date == 'in_3_days':
+                due_date = (now + timedelta(days=3)).replace(hour=23, minute=59)
+            elif quick_date == 'next_week':
+                due_date = (now + timedelta(days=7)).replace(hour=23, minute=59)
         
         if subject_id and title:
             subject=get_object_or_404(Subject,id=subject_id)
