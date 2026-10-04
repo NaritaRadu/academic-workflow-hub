@@ -21,6 +21,7 @@ class Command(BaseCommand):
         app.add_handler(CommandHandler("start",self.cmd_start))
         app.add_handler(CommandHandler("sprint", self.cmd_sprint))
         app.add_handler(CommandHandler("done", self.cmd_done))
+        app.add_handler(CommandHandler("raport", self.cmd_raport))
         
         app.run_polling()
         
