@@ -95,6 +95,12 @@ class Subject(models.Model):
         if needed <= 1.0:
             return 1.0 # Ai trecut deja din punctajul de activitate!
         return round(needed, 2)
+    
+    @property
+    def total_study_hours(self):
+        """Calculează numărul total de ore învățate la această materie"""
+        total_minutes = sum(s.duration_minutes for s in self.study_sessions.all())
+        return round(total_minutes / 60.0, 1)
         
 class Project(models.Model):
     subject=models.ForeignKey(Subject,on_delete=models.CASCADE,related_name="projects")
@@ -216,5 +222,18 @@ class GradeComponent(models.Model):
         return f"[{self.subject.code}] {self.name} ({self.weight_percentage}%) - Nota:{grade_str}" 
        
     
-    
+class StudySession(models.Model):
+    """Înregistrarea sesiunilor de studiu (Pomodoro / Manual) per materie"""
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name="study_sessions")
+    duration_minutes = models.IntegerField(default=25, help_text="Durata sesiunii în minute")
+    session_type = models.CharField(
+        max_length=20, 
+        choices=[('POMODORO', 'Sesiune Pomodoro'), ('MANUAL', 'Introducere Manuală')],
+        default='POMODORO'
+    )
+    notes = models.CharField(max_length=255, blank=True, help_text="La ce ai lucrat în această sesiune (opțional)")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"[{self.subject.code}] {self.duration_minutes} min - {self.created_at.strftime('%d %b %H:%i')}"    
         

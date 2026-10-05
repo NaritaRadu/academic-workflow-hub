@@ -2,7 +2,7 @@ from django.shortcuts import render,redirect, get_object_or_404
 from django.utils import timezone
 from .models import Subject, Project, Task,TestPrep,DebugLog,WeekendPlan,GradeComponent
 from datetime import timedelta
-
+from django.db.models import Sum
 # Create your views here.
 
 
@@ -298,3 +298,48 @@ def grade_calculator(request):
         'simulations': subject_simulations,
     }
     return render(request, 'academic/grades.html', context)
+
+def study_tracker(request):
+    """Pagina Pomodoro Timer & Statistică Ore Învățate"""
+    subjects = Subject.objects.all()
+    recent_sessions = StudySession.objects.all().order_by('-created_at')[:10]
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        # Salvare sesiune de studiu (Pomodoro sau Manuală)
+        if action == 'log_session':
+            subject_id = request.POST.get('subject_id')
+            minutes = request.POST.get('duration_minutes', 25)
+            session_type = request.POST.get('session_type', 'POMODORO')
+            notes = request.POST.get('notes', '')
+
+            if subject_id and minutes:
+                subject = get_object_or_404(Subject, id=subject_id)
+                StudySession.objects.create(
+                    subject=subject,
+                    duration_minutes=int(minutes),
+                    session_type=session_type,
+                    notes=notes
+                )
+            return redirect('study_tracker')
+
+    # Calculăm orele totale per materie pentru grafice
+    subject_stats = []
+    total_all_minutes = 0
+    for sub in subjects:
+        sub_minutes = sum(s.duration_minutes for s in sub.study_sessions.all())
+        total_all_minutes += sub_minutes
+        subject_stats.append({
+            'subject': sub,
+            'hours': round(sub_minutes / 60.0, 1),
+            'minutes': sub_minutes,
+        })
+
+    context = {
+        'subjects': subjects,
+        'recent_sessions': recent_sessions,
+        'subject_stats': subject_stats,
+        'total_hours_all': round(total_all_minutes / 60.0, 1),
+    }
+    return render(request, 'academic/study_tracker.html', context)
