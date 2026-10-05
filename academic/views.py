@@ -1,6 +1,6 @@
 from django.shortcuts import render,redirect, get_object_or_404
 from django.utils import timezone
-from .models import Subject, Project, Task,TestPrep,DebugLog,WeekendPlan,GradeComponent
+from .models import Subject, Project, Task,TestPrep,DebugLog,WeekendPlan,GradeComponent,StudySession
 from datetime import timedelta
 from django.db.models import Sum
 # Create your views here.
@@ -25,16 +25,25 @@ def dashboard(request):
 
 
 def add_task(request):
-    if request.method=='POST':
-        subject_id=request.POST.get('subject_id')
-        project_id=request.POST.get('project_id')
-        title=request.POST.get('title')
-        notes=request.POST.get('notes','')
-        priority=request.POST.get('priority','MEDIUM')
-        estimated_hours=request.POST.get('estimated_hours',1.0)
-        due_date=request.POST.get('due_date')
-        quick_date = request.POST.get('quick_date')
+    """Creează un task nou direct din interfață cu verificare de date valide"""
+    if request.method == 'POST':
+        subject_id = request.POST.get('subject_id')
+        project_id = request.POST.get('project_id')
+        title = request.POST.get('title')
+        notes = request.POST.get('notes', '')
+        priority = request.POST.get('priority', 'MEDIUM')
         
+        # Validare ore estimate (pentru a evita ValueError)
+        hours_raw = request.POST.get('estimated_hours')
+        try:
+            estimated_hours = float(hours_raw) if hours_raw else 1.0
+        except (ValueError, TypeError):
+            estimated_hours = 1.0
+
+        due_date = request.POST.get('due_date')
+        quick_date = request.POST.get('quick_date')
+
+        # Calculare dată rapidă dacă s-a apăsat un buton rapid
         if not due_date and quick_date:
             now = timezone.now()
             if quick_date == 'today':
@@ -45,11 +54,11 @@ def add_task(request):
                 due_date = (now + timedelta(days=3)).replace(hour=23, minute=59)
             elif quick_date == 'next_week':
                 due_date = (now + timedelta(days=7)).replace(hour=23, minute=59)
-        
+
         if subject_id and title:
-            subject=get_object_or_404(Subject,id=subject_id)
-            project=get_object_or_404(Project,id=project_id) if project_id else None
-            
+            subject = get_object_or_404(Subject, id=subject_id)
+            project = get_object_or_404(Project, id=project_id) if project_id and project_id != "" else None
+
             Task.objects.create(
                 subject=subject,
                 project=project,
@@ -59,7 +68,8 @@ def add_task(request):
                 estimated_hours=estimated_hours,
                 due_date=due_date if due_date else None
             )
-    referer=request.META.get('HTTP_REFERER')
+
+    referer = request.META.get('HTTP_REFERER')
     return redirect(referer if referer else 'dashboard')
 
 def subject_detail(request, subject_id):
