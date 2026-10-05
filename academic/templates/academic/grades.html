@@ -1,0 +1,181 @@
+{% extends 'academic/base.html' %}
+
+{% block title %}Calculator Note Poli | Academic Hub{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-cardbg/40 p-4 border border-borderbg rounded-2xl shadow-sm">
+        <div>
+            <h1 class="text-xl font-extrabold text-slate-100 flex items-center gap-2">
+                📊 <span>Calculator Note & Simulare Examen (Sistem Poli)</span>
+            </h1>
+            <p class="text-xs text-slate-400">Calculăm media activității (teste + proiect) și o combinăm cu examenul conform formulei fiecărei materii.</p>
+        </div>
+
+        <button onclick="document.getElementById('addCompModal').showModal()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-lg shadow-blue-600/20 transition">
+            + Adaugă Test / Proiect / Examen
+        </button>
+    </div>
+
+    <!-- Carduri per Materie -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {% for item in simulations %}
+        <div class="bg-cardbg border border-borderbg rounded-2xl p-5 space-y-4 shadow-sm">
+            
+            <!-- Header Materie + Selector Formulă -->
+            <div class="flex justify-between items-start border-b border-borderbg pb-3">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-3.5 h-3.5 rounded-full" style="background-color: {{ item.subject.color_code }};"></span>
+                        <h2 class="font-bold text-slate-100 text-lg">{{ item.subject.name }}</h2>
+                    </div>
+
+                    <!-- Schimbare Formulă Poli -->
+                    <form method="POST" class="mt-2 flex items-center gap-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="update_formula">
+                        <input type="hidden" name="subject_id" value="{{ item.subject.id }}">
+                        
+                        <select name="grading_formula" onchange="this.form.submit()" class="bg-darkbg text-[11px] text-slate-300 font-semibold border border-slate-700 rounded-lg p-1 cursor-pointer">
+                            <option value="50_50" {% if item.subject.grading_formula == '50_50' %}selected{% endif %}>Medie 50% Act / 50% Examen</option>
+                            <option value="33_66" {% if item.subject.grading_formula == '33_66' %}selected{% endif %}>Pondere 33% Act / 66% Examen</option>
+                            <option value="40_60" {% if item.subject.grading_formula == '40_60' %}selected{% endif %}>Pondere 40% Act / 60% Examen</option>
+                            <option value="30_70" {% if item.subject.grading_formula == '30_70' %}selected{% endif %}>Pondere 30% Act / 70% Examen</option>
+                        </select>
+                    </form>
+                </div>
+
+                <div class="text-right">
+                    <span class="text-[10px] text-slate-400 block uppercase font-bold">Nota Curentă</span>
+                    <span class="text-base font-extrabold text-blue-400">{{ item.subject.final_grade }} / 10</span>
+                </div>
+            </div>
+
+            <!-- Secțiunea 1: Componente ACTIVITATE (Teste Lab + Proiecte) -->
+            <div class="space-y-2">
+                <div class="flex justify-between items-center text-xs font-bold text-slate-400">
+                    <span>🧪 Activitate Laborator / Proiecte</span>
+                    <span class="text-amber-400">Media Activitate: {{ item.subject.activity_grade|default:"-" }}</span>
+                </div>
+
+                {% for comp in item.subject.grade_components.all %}
+                {% if comp.category == 'ACTIVITY' %}
+                <form method="POST" class="flex items-center justify-between p-2.5 bg-darkbg/60 border border-slate-800 rounded-xl text-xs">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_grade">
+                    <input type="hidden" name="component_id" value="{{ comp.id }}">
+                    
+                    <span class="font-semibold text-slate-200">{{ comp.name }}</span>
+
+                    <div class="flex items-center gap-2">
+                        <input type="number" step="0.5" min="1" max="10" name="obtained_grade" value="{{ comp.obtained_grade|default_if_none:'' }}" placeholder="Nota..." class="w-16 bg-slate-900 border border-slate-700 rounded-lg p-1 text-center text-xs text-slate-200 font-bold">
+                        <button type="submit" class="text-xs text-slate-500 hover:text-blue-400 font-bold">💾</button>
+                    </div>
+                </form>
+                {% endif %}
+                {% endfor %}
+            </div>
+
+            <!-- Secțiunea 2: EXAMEN FINAL -->
+            <div class="space-y-2 pt-2 border-t border-borderbg/50">
+                <span class="text-xs font-bold text-slate-400 block">📝 Examen Final</span>
+
+                {% for comp in item.subject.grade_components.all %}
+                {% if comp.category == 'EXAM' %}
+                <form method="POST" class="flex items-center justify-between p-2.5 bg-darkbg/60 border border-amber-500/30 rounded-xl text-xs">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_grade">
+                    <input type="hidden" name="component_id" value="{{ comp.id }}">
+                    
+                    <span class="font-bold text-amber-400">{{ comp.name }}</span>
+
+                    <div class="flex items-center gap-2">
+                        <input type="number" step="0.5" min="1" max="10" name="obtained_grade" value="{{ comp.obtained_grade|default_if_none:'' }}" placeholder="Nota..." class="w-16 bg-slate-900 border border-amber-500/50 rounded-lg p-1 text-center text-xs text-amber-300 font-bold">
+                        <button type="submit" class="text-xs text-amber-400 hover:text-amber-300 font-bold">💾</button>
+                    </div>
+                </form>
+                {% endif %}
+                {% endfor %}
+            </div>
+
+            <!-- Simulor Examen (Cât îți mai trebuie la Examen) -->
+            {% if not item.subject.exam_grade %}
+            <div class="bg-darkbg/80 border border-amber-500/30 rounded-xl p-3.5 space-y-2">
+                <span class="text-xs font-bold text-amber-400 block">🎯 Cât îți trebuie la EXAMEN pentru a trece:</span>
+                <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                    <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-800">
+                        <span class="text-[10px] text-slate-400 block">Pentru Nota 5</span>
+                        <strong class="{% if item.needed_5 > 10 %}text-red-400{% else %}text-emerald-400{% endif %} font-extrabold text-sm">
+                            {% if item.needed_5 > 10 %}Imposibil{% elif item.needed_5 <= 1 %}Trecut!{% else %}{{ item.needed_5 }}{% endif %}
+                        </strong>
+                    </div>
+
+                    <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-800">
+                        <span class="text-[10px] text-slate-400 block">Pentru Nota 8</span>
+                        <strong class="text-blue-400 font-extrabold text-sm">
+                            {% if item.needed_8 > 10 %}Imposibil{% else %}{{ item.needed_8 }}{% endif %}
+                        </strong>
+                    </div>
+
+                    <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-800">
+                        <span class="text-[10px] text-slate-400 block">Pentru Nota 10</span>
+                        <strong class="text-purple-400 font-extrabold text-sm">
+                            {% if item.needed_10 > 10 %}Imposibil{% else %}{{ item.needed_10 }}{% endif %}
+                        </strong>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Modal Adăugare Componentă -->
+<dialog id="addCompModal" class="bg-transparent backdrop:bg-black/70 backdrop:backdrop-blur-sm p-0 rounded-2xl max-w-md w-full my-auto">
+    <div class="bg-cardbg border border-borderbg rounded-2xl p-6 shadow-2xl space-y-4 text-slate-100">
+        <div class="flex justify-between items-center border-b border-borderbg pb-3">
+            <h3 class="font-bold text-lg text-slate-100">➕ Adaugă Test / Proiect / Examen</h3>
+            <button onclick="document.getElementById('addCompModal').close()" type="button" class="text-slate-400 hover:text-red-400 font-bold">✕</button>
+        </div>
+
+        <form method="POST" class="space-y-3">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_component">
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Materia *</label>
+                <select name="subject_id" required class="w-full bg-darkbg border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200">
+                    {% for sub in subjects %}
+                    <option value="{{ sub.id }}">{{ sub.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Categorie Componentă *</label>
+                <select name="category" required class="w-full bg-darkbg border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200">
+                    <option value="ACTIVITY">Activitate (Test Laborator / Proiect / Colocviu)</option>
+                    <option value="EXAM">Examen Final</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Nume Componentă *</label>
+                <input type="text" name="name" required placeholder="ex: Test Laborator 1, Proiect PM, Examen Scris" class="w-full bg-darkbg border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200">
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Nota Obținută (Opțional)</label>
+                <input type="number" step="0.5" min="1" max="10" name="obtained_grade" placeholder="ex: 8.5" class="w-full bg-darkbg border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200">
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button type="button" onclick="document.getElementById('addCompModal').close()" class="w-1/3 bg-slate-800 text-slate-300 font-bold py-2.5 rounded-xl text-xs">Anulează</button>
+                <button type="submit" class="w-2/3 bg-blue-600 font-bold py-2.5 rounded-xl text-xs text-white">Salvează Componenta</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+{% endblock %}

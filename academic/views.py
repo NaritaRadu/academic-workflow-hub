@@ -1,6 +1,6 @@
 from django.shortcuts import render,redirect, get_object_or_404
 from django.utils import timezone
-from .models import Subject, Project, Task,TestPrep,DebugLog,WeekendPlan
+from .models import Subject, Project, Task,TestPrep,DebugLog,WeekendPlan,GradeComponent
 from datetime import timedelta
 
 # Create your views here.
@@ -63,16 +63,20 @@ def add_task(request):
     return redirect(referer if referer else 'dashboard')
 
 def subject_detail(request, subject_id):
-    """Pagina dedicată unei singure materii (ex: Click pe SO2)"""
+    """Pagina dedicată unei singure materii cu listă de task-uri și adăugare rapidă"""
     subject = get_object_or_404(Subject, id=subject_id)
+    
+    # Proiecte, debug-logs și task-uri asociate materiei
     projects = subject.projects.all()
-    tasks = subject.tasks.filter(is_completed=False)
+    pending_tasks = subject.tasks.filter(is_completed=False).order_by('due_date', '-priority')
+    completed_tasks = subject.tasks.filter(is_completed=True).order_by('-completed_at')[:5]
     debug_logs = subject.debug_logs.all().order_by('-created_at')
 
     context = {
         'subject': subject,
         'projects': projects,
-        'tasks': tasks,
+        'pending_tasks': pending_tasks,
+        'completed_tasks': completed_tasks,
         'debug_logs': debug_logs,
     }
     return render(request, 'academic/subject_detail.html', context)
@@ -225,3 +229,72 @@ def debug_log_list(request):
     logs = DebugLog.objects.all().order_by('-created_at')
     subjects = Subject.objects.all()
     return render(request, 'academic/debug_logs.html', {'logs': logs, 'subjects': subjects})
+
+
+def grade_calculator(request):
+    subjects = Subject.objects.all()
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        # 1. Schimbare Formulă Materie (50/50, 33/66, 40/60)
+        if action == 'update_formula':
+            subject_id = request.POST.get('subject_id')
+            formula = request.POST.get('grading_formula')
+            if subject_id and formula:
+                subject = get_object_or_404(Subject, id=subject_id)
+                subject.grading_formula = formula
+                subject.save()
+            return redirect('grade_calculator')
+
+        # 2. Adăugare Componentă Nouă (Test Lab, Proiect, Examen)
+        elif action == 'add_component':
+            subject_id = request.POST.get('subject_id')
+            name = request.POST.get('name')
+            category = request.POST.get('category', 'ACTIVITY')
+            grade = request.POST.get('obtained_grade')
+
+            if subject_id and name:
+                subject = get_object_or_404(Subject, id=subject_id)
+                
+                # Dacă adăugăm un examen, ne asigurăm că nu mai există altul creat
+                if category == 'EXAM':
+                    GradeComponent.objects.filter(subject=subject, category='EXAM').delete()
+
+                GradeComponent.objects.create(
+                    subject=subject,
+                    name=name,
+                    category=category,
+                    obtained_grade=float(grade) if grade else None
+                )
+            return redirect('grade_calculator')
+
+        # 3. Salvare / Actualizare Notă Obținută
+        elif action == 'update_grade':
+            comp_id = request.POST.get('component_id')
+            grade = request.POST.get('obtained_grade')
+            comp = get_object_or_404(GradeComponent, id=comp_id)
+            
+            comp.obtained_grade = float(grade) if grade else None
+            comp.save()
+            return redirect('grade_calculator')
+
+    # Pregătim simulările
+    subject_simulations = []
+    for sub in subjects:
+        needed_5 = sub.needed_exam_grade(5.0)
+        needed_8 = sub.needed_exam_grade(8.0)
+        needed_10 = sub.needed_exam_grade(10.0)
+
+        subject_simulations.append({
+            'subject': sub,
+            'needed_5': needed_5,
+            'needed_8': needed_8,
+            'needed_10': needed_10,
+        })
+
+    context = {
+        'subjects': subjects,
+        'simulations': subject_simulations,
+    }
+    return render(request, 'academic/grades.html', context)

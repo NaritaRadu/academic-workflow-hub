@@ -4,42 +4,206 @@
 
 {% block content %}
 <div class="space-y-8">
-    <div class="flex items-center gap-3 border-b border-borderbg pb-4">
-        <span class="w-5 h-5 rounded-full" style="background-color: {{ subject.color_code }};"></span>
-        <h1 class="text-3xl font-bold text-slate-100">{{ subject.name }} ({{ subject.code }})</h1>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <!-- Proiecte asociate -->
-        <div class="space-y-4">
-            <h2 class="text-xl font-bold">Proiecte la această materie</h2>
-            {% for project in projects %}
-            <div class="bg-cardbg border border-borderbg rounded-xl p-4 space-y-2">
-                <h3 class="font-bold text-slate-100 text-lg">{{ project.title }}</h3>
-                <p class="text-xs text-slate-400">{{ project.description }}</p>
-                {% if project.repository_url %}
-                <a href="{{ project.repository_url }}" target="_blank" class="inline-block text-xs text-blue-400 hover:underline">
-                    🔗 Deschide Repo Git / Resurse
-                </a>
+    
+    <!-- Header Materie + Buton Adaugă Task -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-cardbg border border-borderbg rounded-2xl p-6 shadow-sm">
+        <div class="flex items-center gap-3">
+            <span class="w-5 h-5 rounded-full shadow-sm" style="background-color: {{ subject.color_code }};"></span>
+            <div>
+                <h1 class="text-2xl font-black text-slate-100">{{ subject.name }} ({{ subject.code }})</h1>
+                {% if subject.professor %}
+                <p class="text-xs text-slate-400">Profesor: {{ subject.professor }}</p>
                 {% endif %}
             </div>
-            {% empty %}
-            <p class="text-sm text-slate-400">Fără proiecte adăugate.</p>
-            {% endfor %}
         </div>
 
-        <!-- Debug Logs asociate -->
-        <div class="space-y-4">
-            <h2 class="text-xl font-bold">Note Debugging & Soluții</h2>
-            {% for log in debug_logs %}
-            <div class="bg-cardbg border border-borderbg rounded-xl p-4 space-y-2">
-                <h3 class="font-bold text-red-400 text-sm">{{ log.title }}</h3>
-                <pre class="bg-slate-900 p-2 rounded text-xs text-slate-300 overflow-x-auto">{{ log.solution }}</pre>
+        <button onclick="document.getElementById('subjectTaskModal').showModal()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-blue-600/20 transition">
+            <span>+ Adaugă Task la {{ subject.code }}</span>
+        </button>
+    </div>
+
+    <!-- Layout pe 2 Coloane: Task-uri & Proiecte | Debug Vault -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        <!-- Coloană Stânga: Task-urile Materiei -->
+        <div class="space-y-6">
+            <div class="bg-cardbg border border-borderbg rounded-2xl p-5 space-y-4 shadow-sm">
+                <div class="flex justify-between items-center border-b border-borderbg pb-3">
+                    <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+                        ⚡ <span>Task-uri de rezolvat ({{ pending_tasks.count }})</span>
+                    </h2>
+                </div>
+
+                <div class="space-y-2">
+                    {% for task in pending_tasks %}
+                    <div class="flex items-center justify-between p-3 bg-darkbg/60 border border-slate-800 rounded-xl hover:border-slate-700 transition">
+                        <div class="flex items-center gap-3">
+                            <a href="{% url 'toggle_task' task.id %}" class="w-5 h-5 rounded-md border border-slate-600 flex items-center justify-center hover:border-blue-400 text-blue-400 font-bold text-xs transition">
+                                {% if task.is_completed %}✓{% endif %}
+                            </a>
+                            <div>
+                                <p class="text-xs font-semibold text-slate-200">{{ task.title }}</p>
+                                <div class="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                                    <span>• {{ task.estimated_hours }}h</span>
+                                    {% if task.due_date %}
+                                    <span>• Limită: {{ task.due_date|date:"d M H:i" }}</span>
+                                    {% endif %}
+                                    {% if task.priority == 'HIGH' %}
+                                    <span class="text-red-400 font-extrabold">• Urgent</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-xs text-slate-500 text-center py-4">Nu ai niciun task activ la {{ subject.code }}. Toate sunt rezolvate! 🎉</p>
+                    {% endfor %}
+                </div>
+
+                <!-- Task-uri Completate Recent (Pliabil) -->
+                {% if completed_tasks %}
+                <details class="pt-2 border-t border-borderbg/50">
+                    <summary class="text-xs font-bold text-slate-400 cursor-pointer hover:text-slate-200 transition">
+                        ✓ Vezi ultimele task-uri completate ({{ completed_tasks.count }})
+                    </summary>
+                    <div class="space-y-2 mt-3">
+                        {% for task in completed_tasks %}
+                        <div class="flex items-center gap-3 p-2 bg-darkbg/30 border border-slate-800/50 rounded-lg text-xs opacity-60">
+                            <a href="{% url 'toggle_task' task.id %}" class="text-emerald-400 font-bold">✓</a>
+                            <span class="line-through text-slate-400">{{ task.title }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </details>
+                {% endif %}
             </div>
-            {% empty %}
-            <p class="text-sm text-slate-400">Nicio notă de debugging înregistrată.</p>
-            {% endfor %}
+
+            <!-- Proiecte la această Materie -->
+            <div class="bg-cardbg border border-borderbg rounded-2xl p-5 space-y-4 shadow-sm">
+                <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+                    📁 <span>Proiecte asociate</span>
+                </h2>
+                
+                {% for project in projects %}
+                <div class="bg-darkbg/60 border border-slate-800 rounded-xl p-4 space-y-2">
+                    <div class="flex justify-between items-start">
+                        <h3 class="font-bold text-slate-100 text-sm">{{ project.title }}</h3>
+                        {% if project.repository_url %}
+                        <a href="{{ project.repository_url }}" target="_blank" class="text-xs text-blue-400 font-bold hover:underline">🔗 Repo Git</a>
+                        {% endif %}
+                    </div>
+                    <p class="text-xs text-slate-400">{{ project.description }}</p>
+                    <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
+                        <div class="bg-blue-500 h-1.5 rounded-full" style="width: {{ project.progress_percentage }}%;"></div>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-xs text-slate-500">Niciun proiect înregistrat la această materie.</p>
+                {% endfor %}
+            </div>
         </div>
+
+        <!-- Coloană Dreapta: Debug Logs & Note de Laborator -->
+        <div class="space-y-6">
+            <div class="bg-cardbg border border-borderbg rounded-2xl p-5 space-y-4 shadow-sm">
+                <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+                    🛠️ <span>Debug Vault & Soluții ({{ debug_logs.count }})</span>
+                </h2>
+
+                {% for log in debug_logs %}
+                <div class="bg-darkbg/60 border border-slate-800 rounded-xl p-4 space-y-2">
+                    <h3 class="font-bold text-red-400 text-xs">{{ log.title }}</h3>
+                    {% if log.error_message %}
+                    <p class="text-[11px] font-mono text-red-300 bg-red-950/20 p-2 rounded border border-red-900/30">{{ log.error_message }}</p>
+                    {% endif %}
+                    <pre class="bg-slate-950 p-2.5 rounded-lg text-xs font-mono text-emerald-300 whitespace-pre-wrap border border-slate-900">{{ log.solution }}</pre>
+                </div>
+                {% empty %}
+                <p class="text-xs text-slate-500">Nicio notă de debugging înregistrată pentru {{ subject.code }}.</p>
+                {% endfor %}
+            </div>
+        </div>
+
     </div>
 </div>
+
+<!-- Modal Adăugare Task Rapid special pentru această Materie -->
+<dialog id="subjectTaskModal" class="bg-transparent backdrop:bg-black/70 backdrop:backdrop-blur-sm p-0 rounded-2xl max-w-md w-full my-auto">
+    <div class="bg-cardbg border border-borderbg rounded-2xl p-6 shadow-2xl space-y-4 text-slate-100">
+        
+        <div class="flex justify-between items-center border-b border-borderbg pb-3">
+            <h3 class="font-bold text-lg text-slate-100">➕ Task Nou la <span style="color: {{ subject.color_code }};">{{ subject.code }}</span></h3>
+            <button onclick="document.getElementById('subjectTaskModal').close()" type="button" class="text-slate-400 hover:text-red-400 p-1 font-bold text-lg rounded-lg transition">✕</button>
+        </div>
+
+        <form method="POST" action="{% url 'add_task' %}" class="space-y-3">
+            {% csrf_token %}
+            
+            <!-- Materia este setată automat și ascunsă -->
+            <input type="hidden" name="subject_id" value="{{ subject.id }}">
+
+            {% if projects %}
+            <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Proiect Asociat (Opțional)</label>
+                <select name="project_id" class="w-full bg-darkbg border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200">
+                    <option value="">--- Fără Proiect ---</option>
+                    {% for prj in projects %}
+                    <option value="{{ prj.id }}">{{ prj.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Titlu Task *</label>
+                <input type="text" name="title" required placeholder="ex: Pregătire laborator {{ subject.code }}" class="w-full bg-darkbg border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Prioritate</label>
+                    <select name="priority" class="w-full bg-darkbg border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200">
+                        <option value="LOW">Scăzută</option>
+                        <option value="MEDIUM" selected>Medie</option>
+                        <option value="HIGH">Ridicată</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Ore Estimate</label>
+                    <input type="number" step="0.5" name="estimated_hours" value="1.0" class="w-full bg-darkbg border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Notițe / Detalii</label>
+                <textarea name="notes" rows="2" class="w-full bg-darkbg border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200" placeholder="Ce mai e de făcut..."></textarea>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button type="button" onclick="document.getElementById('subjectTaskModal').close()" class="w-1/3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl text-xs transition border border-slate-700">
+                    Anulează
+                </button>
+                <button type="submit" class="w-2/3 bg-blue-600 hover:bg-blue-500 font-bold py-2.5 rounded-xl text-xs text-white transition shadow-lg shadow-blue-600/20">
+                    Salvează Task-ul
+                </button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<script>
+    const subModal = document.getElementById('subjectTaskModal');
+    subModal.addEventListener('click', (e) => {
+        const dialogDimensions = subModal.getBoundingClientRect();
+        if (
+            e.clientX < dialogDimensions.left ||
+            e.clientX > dialogDimensions.right ||
+            e.clientY < dialogDimensions.top ||
+            e.clientY > dialogDimensions.bottom
+        ) {
+            subModal.close();
+        }
+    });
+</script>
 {% endblock %}
