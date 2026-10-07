@@ -1,8 +1,11 @@
 from django.shortcuts import render,redirect, get_object_or_404
 from django.utils import timezone
-from .models import Subject, Project, Task,TestPrep,DebugLog,WeekendPlan,GradeComponent,StudySession
-from datetime import timedelta
+from .models import Subject, Project, Task,TestPrep,DebugLog,WeekendPlan,GradeComponent,StudySession,Flashcard
+from datetime import timedelta,datetime
 from django.db.models import Sum
+from google import genai
+import os
+import json
 # Create your views here.
 
 
@@ -25,40 +28,59 @@ def dashboard(request):
 
 
 def add_task(request):
-    """Creează un task nou direct din interfață cu verificare de date valide"""
+    """Creează un task nou garantat fără erori de conversie"""
     if request.method == 'POST':
         subject_id = request.POST.get('subject_id')
         project_id = request.POST.get('project_id')
         title = request.POST.get('title')
         notes = request.POST.get('notes', '')
         priority = request.POST.get('priority', 'MEDIUM')
-        
-        # Validare ore estimate (pentru a evita ValueError)
-        hours_raw = request.POST.get('estimated_hours')
-        try:
-            estimated_hours = float(hours_raw) if hours_raw else 1.0
-        except (ValueError, TypeError):
-            estimated_hours = 1.0
-
-        due_date = request.POST.get('due_date')
-        quick_date = request.POST.get('quick_date')
-
-        # Calculare dată rapidă dacă s-a apăsat un buton rapid
-        if not due_date and quick_date:
-            now = timezone.now()
-            if quick_date == 'today':
-                due_date = now.replace(hour=23, minute=59)
-            elif quick_date == 'tomorrow':
-                due_date = (now + timedelta(days=1)).replace(hour=23, minute=59)
-            elif quick_date == 'in_3_days':
-                due_date = (now + timedelta(days=3)).replace(hour=23, minute=59)
-            elif quick_date == 'next_week':
-                due_date = (now + timedelta(days=7)).replace(hour=23, minute=59)
 
         if subject_id and title:
             subject = get_object_or_404(Subject, id=subject_id)
-            project = get_object_or_404(Project, id=project_id) if project_id and project_id != "" else None
+            
+            # 1. Validare proiect
+            project = None
+            if project_id and project_id.strip() != "":
+                try:
+                    project = Project.objects.get(id=int(project_id))
+                except (ValueError, Project.DoesNotExist):
+                    project = None
 
+            # 2. Validare ore estimate
+            hours_raw = request.POST.get('estimated_hours')
+            try:
+                estimated_hours = float(hours_raw) if hours_raw else 1.0
+            except (ValueError, TypeError):
+                estimated_hours = 1.0
+
+            # 3. Validare dată limită (Due Date)
+            due_date = None
+            quick_date = request.POST.get('quick_date')
+            due_date_raw = request.POST.get('due_date')
+
+            # Opțiunea A: Buton rapid
+            if quick_date:
+                now = timezone.now()
+                if quick_date == 'today':
+                    due_date = now.replace(hour=23, minute=59)
+                elif quick_date == 'tomorrow':
+                    due_date = (now + timedelta(days=1)).replace(hour=23, minute=59)
+                elif quick_date == 'in_3_days':
+                    due_date = (now + timedelta(days=3)).replace(hour=23, minute=59)
+                elif quick_date == 'next_week':
+                    due_date = (now + timedelta(days=7)).replace(hour=23, minute=59)
+
+            # Opțiunea B: Dată din calendar (dacă nu s-a folosit buton rapid)
+            if not due_date and due_date_raw and due_date_raw.strip() != "":
+                try:
+                    # Încercăm să parsăm formatul din Flatpickr (YYYY-MM-DD HH:MM)
+                    naive_dt = datetime.strptime(due_date_raw.strip(), "%Y-%m-%d %H:%M")
+                    due_date = timezone.make_aware(naive_dt)
+                except ValueError:
+                    due_date = None
+
+            # Salvare sigură
             Task.objects.create(
                 subject=subject,
                 project=project,
@@ -66,11 +88,45 @@ def add_task(request):
                 notes=notes,
                 priority=priority,
                 estimated_hours=estimated_hours,
-                due_date=due_date if due_date else None
+                due_date=due_date
             )
 
     referer = request.META.get('HTTP_REFERER')
     return redirect(referer if referer else 'dashboard')
+
+
+def manage_subjects(request):
+    """Adăugare și ștergere materii din interfață"""
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        # Adăugare materie nouă
+        if action == 'add_subject':
+            name = request.POST.get('name')
+            code = request.POST.get('code')
+            professor = request.POST.get('professor', '')
+            color_code = request.POST.get('color_code', '#3B82F6')
+            grading_formula = request.POST.get('grading_formula', '50_50')
+
+            if name and code:
+                Subject.objects.create(
+                    name=name,
+                    code=code,
+                    professor=professor,
+                    color_code=color_code,
+                    grading_formula=grading_formula
+                )
+            return redirect(request.META.get('HTTP_REFERER', 'dashboard'))
+
+        # Ștergere materie
+        elif action == 'delete_subject':
+            subject_id = request.POST.get('subject_id')
+            if subject_id:
+                subject = get_object_or_404(Subject, id=subject_id)
+                subject.delete()
+            return redirect(request.META.get('HTTP_REFERER', 'dashboard'))
+
+    return redirect('dashboard')
 
 def subject_detail(request, subject_id):
     """Pagina dedicată unei singure materii cu listă de task-uri și adăugare rapidă"""
@@ -353,3 +409,88 @@ def study_tracker(request):
         'total_hours_all': round(total_all_minutes / 60.0, 1),
     }
     return render(request, 'academic/study_tracker.html', context)
+
+
+def flashcards_view(request):
+    """Sistem de studiu cu Flashcards + Generare AI prin Gemini"""
+    subjects = Subject.objects.all()
+    selected_subject_id = request.GET.get('subject_id')
+    
+    if selected_subject_id:
+        selected_subject = get_object_or_404(Subject, id=selected_subject_id)
+        cards = Flashcard.objects.filter(subject=selected_subject)
+    else:
+        selected_subject = None
+        cards = Flashcard.objects.all()
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        # 1. Generare Flashcards prin Gemini AI
+        if action == 'generate_ai':
+            subject_id = request.POST.get('subject_id')
+            raw_text = request.POST.get('raw_text')
+            
+            if subject_id and raw_text:
+                subject = get_object_or_404(Subject, id=subject_id)
+                api_key = os.getenv('GEMINI_API_KEY')
+
+                if api_key:
+                    try:
+                        client = genai.Client(api_key=api_key)
+                        prompt = (
+                            f"Ești un asistent universitar la profilul Calculatoare și Tehnologia Informației.\n"
+                            f"Pe baza următorului text/suport de curs pentru materia {subject.name}, generează exact 5 întrebări și răspunsuri esențiale pentru pregătirea testului.\n"
+                            f"Răspunsul tău TREBUIE să fie STRICT un text formatat ca o listă JSON validă de obiecte cu cheile 'question' și 'answer', fără alt text suplimentar în afara JSON-ului.\n\n"
+                            f"Exemplu format JSON:\n"
+                            f'[\n  {{"question": "Ce este un mutex?", "answer": "Un mecamism de sincronizare..."}}\n]\n\n'
+                            f"Text de analizat:\n{raw_text}"
+                        )
+
+                        response = client.models.generate_content(
+                            model='gemini-2.5-flash',
+                            contents=prompt
+                        )
+
+                        # Curățăm textul pentru a extrage corect JSON-ul
+                        res_text = response.text.strip()
+                        if res_text.startswith("```json"):
+                            res_text = res_text[7:]
+                        if res_text.endswith("```"):
+                            res_text = res_text[:-3]
+                        res_text = res_text.strip()
+
+                        flashcard_data = json.loads(res_text)
+
+                        for item in flashcard_data:
+                            Flashcard.objects.create(
+                                subject=subject,
+                                question=item.get('question', ''),
+                                answer=item.get('answer', '')
+                            )
+                    except Exception as e:
+                        print(f"Eroare la generarea prin Gemini API: {e}")
+
+                return redirect(f"{request.path}?subject_id={subject_id}")
+
+        # 2. Marcare Flashcard ca Învățat / Reorganizat
+        elif action == 'toggle_mastered':
+            card_id = request.POST.get('card_id')
+            card = get_object_or_404(Flashcard, id=card_id)
+            card.is_mastered = not card.is_mastered
+            card.save()
+            return redirect(request.META.get('HTTP_REFERER', 'flashcards_view'))
+
+        # 3. Ștergere Card
+        elif action == 'delete_card':
+            card_id = request.POST.get('card_id')
+            card = get_object_or_404(Flashcard, id=card_id)
+            card.delete()
+            return redirect(request.META.get('HTTP_REFERER', 'flashcards_view'))
+
+    context = {
+        'subjects': subjects,
+        'cards': cards,
+        'selected_subject': selected_subject,
+    }
+    return render(request, 'academic/flashcards.html', context)

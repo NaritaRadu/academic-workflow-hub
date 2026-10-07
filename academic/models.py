@@ -236,4 +236,14 @@ class StudySession(models.Model):
 
     def __str__(self):
         return f"[{self.subject.code}] {self.duration_minutes} min - {self.created_at.strftime('%d %b %H:%i')}"    
-        
+
+class Flashcard(models.Model):
+    """Carduri de studiu generate manual sau prin AI Gemini"""
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name="flashcards")
+    question = models.TextField(help_text="Întrebarea sau conceptul de verificat")
+    answer = models.TextField(help_text="Răspunsul sau explicația corectă")
+    is_mastered = models.BooleanField(default=False, help_text="Marchează dacă ai învățat deja acest card")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"[{self.subject.code}] {self.question[:40]}..."       

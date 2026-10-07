@@ -1,0 +1,133 @@
+{% extends 'academic/base.html' %}
+
+{% block title %}AI Flashcards | Academic Hub{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-cardbg/40 p-4 border border-borderbg rounded-2xl shadow-sm">
+        <div>
+            <h1 class="text-xl font-extrabold text-slate-100 flex items-center gap-2">
+                🤖 <span>AI Flashcards & Generator Teste</span>
+            </h1>
+            <p class="text-xs text-slate-400">Introdu textul dintr-un curs sau laborator și Gemini AI va genera întrebări grilă/carduri de învațat.</p>
+        </div>
+
+        <button onclick="document.getElementById('aiModal').showModal()" class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-lg shadow-purple-600/20 transition flex items-center gap-2">
+            ✨ Generează Carduri cu Gemini AI
+        </button>
+    </div>
+
+    <!-- Filtrare pe Materii -->
+    <div class="flex flex-wrap gap-2">
+        <a href="{% url 'flashcards_view' %}" class="px-3 py-1.5 rounded-xl text-xs font-bold transition {% if not selected_subject %}bg-blue-600 text-white{% else %}bg-cardbg text-slate-400 hover:text-slate-200 border border-borderbg{% endif %}">
+            Toate Materiile
+        </a>
+        {% for sub in subjects %}
+        <a href="?subject_id={{ sub.id }}" class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 {% if selected_subject.id == sub.id %}bg-blue-600 text-white{% else %}bg-cardbg text-slate-400 hover:text-slate-200 border border-borderbg{% endif %}">
+            <span class="w-2 h-2 rounded-full" style="background-color: {{ sub.color_code }};"></span>
+            <span>{{ sub.code }}</span>
+        </a>
+        {% endfor %}
+    </div>
+
+    <!-- Grid Carduri Interactive -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for card in cards %}
+        <div class="bg-cardbg border {% if card.is_mastered %}border-emerald-500/40 opacity-70{% else %}border-borderbg{% endif %} rounded-2xl p-5 shadow-sm space-y-4 flex flex-col justify-between transition hover:border-slate-600">
+            
+            <div class="space-y-3">
+                <div class="flex justify-between items-center">
+                    <span class="text-[10px] font-black px-2 py-0.5 rounded text-white" style="background-color: {{ card.subject.color_code }};">
+                        {{ card.subject.code }}
+                    </span>
+                    {% if card.is_mastered %}
+                    <span class="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded font-bold">✓ Învățat</span>
+                    {% endif %}
+                </div>
+
+                <!-- Întrebare -->
+                <div>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Întrebare / Concept:</span>
+                    <h3 class="font-bold text-slate-100 text-sm leading-relaxed">{{ card.question }}</h3>
+                </div>
+
+                <!-- Răspuns (Afișabil la click / Toggle) -->
+                <details class="group bg-darkbg/80 border border-slate-800 rounded-xl p-3">
+                    <summary class="text-xs font-bold text-blue-400 cursor-pointer group-open:text-amber-400 transition">
+                        👁️ Apasă pentru a vedea răspunsul
+                    </summary>
+                    <p class="text-xs text-slate-300 mt-2 font-mono leading-relaxed border-t border-slate-800/80 pt-2">
+                        {{ card.answer }}
+                    </p>
+                </details>
+            </div>
+
+            <!-- Acțiuni pe Card -->
+            <div class="flex items-center justify-between pt-3 border-t border-borderbg/50 text-xs">
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="toggle_mastered">
+                    <input type="hidden" name="card_id" value="{{ card.id }}">
+                    <button type="submit" class="text-slate-400 hover:text-emerald-400 font-bold transition">
+                        {% if card.is_mastered %}🔄 Pune înapoi la studiu{% else %}✅ Marchează ca învățat{% endif %}
+                    </button>
+                </form>
+
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete_card">
+                    <input type="hidden" name="card_id" value="{{ card.id }}">
+                    <button type="submit" class="text-slate-500 hover:text-red-400 font-bold transition">Șterge</button>
+                </form>
+            </div>
+
+        </div>
+        {% empty %}
+        <div class="col-span-full bg-cardbg border border-borderbg rounded-2xl p-8 text-center text-slate-400 text-xs space-y-3">
+            <p>Nu ai niciun card de învățat la această categorie.</p>
+            <button onclick="document.getElementById('aiModal').showModal()" class="text-blue-400 font-bold hover:underline">
+                + Generează primele carduri folosind Gemini AI
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Modal Generare AI -->
+<dialog id="aiModal" class="bg-transparent backdrop:bg-black/70 backdrop:backdrop-blur-sm p-0 rounded-2xl max-w-lg w-full my-auto">
+    <div class="bg-cardbg border border-borderbg rounded-2xl p-6 shadow-2xl space-y-4 text-slate-100">
+        <div class="flex justify-between items-center border-b border-borderbg pb-3">
+            <h3 class="font-bold text-lg text-slate-100 flex items-center gap-2">
+                ✨ <span>Generare AI Flashcards</span>
+            </h3>
+            <button onclick="document.getElementById('aiModal').close()" type="button" class="text-slate-400 hover:text-red-400 font-bold">✕</button>
+        </div>
+
+        <form method="POST" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="generate_ai">
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Materia *</label>
+                <select name="subject_id" required class="w-full bg-darkbg border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200">
+                    {% for sub in subjects %}
+                    <option value="{{ sub.id }}">{{ sub.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Copiază mai jos textul din Curs / Laborator / Notițe *</label>
+                <textarea name="raw_text" required rows="6" placeholder="Paste la textul din cursul de SO2, PM sau BIA..." class="w-full bg-darkbg border border-slate-700 rounded-xl p-3 text-xs text-slate-200 font-mono"></textarea>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button type="button" onclick="document.getElementById('aiModal').close()" class="w-1/3 bg-slate-800 text-slate-300 font-bold py-2.5 rounded-xl text-xs">Anulează</button>
+                <button type="submit" class="w-2/3 bg-gradient-to-r from-purple-600 to-blue-600 font-bold py-2.5 rounded-xl text-xs text-white shadow-lg shadow-purple-600/20">
+                    🚀 Generează 5 Întrebări AI
+                </button>
+            </div>
+        </form>
+    </div>
+</dialog>
+{% endblock %}
